@@ -83,7 +83,7 @@ opaque and 255 is fully transparent). The stamp map aligns with the second UV co
 
 ## Lua/Car Data:
 
-See the Wiki: https://wiki.automationgame.com/index.php?title=Creating_a_Custom_Exporter
+See the Wiki: https://wiki.automationgame.com/index.php?title=Exporter_Plugin_SDK
 
 
 ## Transform and position information:
