@@ -14,7 +14,7 @@
 
 //This value is incremented when data structures or interface function definitions change
 //Automation will not load export DLLs whose interface version does not match the latest version
-#define AUCAREXPORT_DLL_INTERFACE_VERSION 20
+#define AUCAREXPORT_DLL_INTERFACE_VERSION 21
 
 
 #define AUCAREXPORT_MAX_DATA_ITEM_COUNT 16

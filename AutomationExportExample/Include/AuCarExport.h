@@ -345,6 +345,17 @@ struct AuCarExpTextureAtlasData
 	AuCarExpVector2 UVScale = AuCarExpVector2(1.0f, 1.0f);
 };
 
+struct AuCarExpTextureData
+{
+	float Multiplier = 1.0f;
+
+	AuCarExpPixelChannel MaskChannel = AuCarExpPixelChannel_A;
+	AuCarExpTexture* Texture = nullptr;
+	AuCarExpTextureAtlasData* AtlasData = nullptr;
+
+	inline AuCarExpTexture* GetTextureFinal() const { return AtlasData ? AtlasData->Texture : Texture; }
+};
+
 enum AuCarExpMaterialFlags
 {
 	AuCarExpMaterialFlags_None					= 0,
@@ -358,56 +369,36 @@ enum AuCarExpMaterialFlags
 class AuCarExpMaterial
 {
 public:
-	inline AuCarExpTexture* GetMapDiffuse() const { return m_DiffuseTexture; }
-	inline AuCarExpTexture* GetMapNormal() const { return m_NormalTexture; }
-	inline AuCarExpTexture* GetMapRoughness() const { return m_RoughnessTexture; }
-	inline AuCarExpTexture* GetMapMetallic() const { return m_MetallicTexture; }
-	inline AuCarExpTexture* GetMapSpecular() const { return m_SpecularTexture; }
-	inline AuCarExpTexture* GetMapOpacity() const { return m_OpacityTexture; }
-	inline AuCarExpTexture* GetMapSecondaryTint() const { return m_SecondaryTintMaskTexture; }
-
-	inline AuCarExpTextureAtlasData* GetAtlasDataDiffuse() const { return m_DiffuseAtlasData; }
-	inline AuCarExpTextureAtlasData* GetAtlasDataNormal() const { return m_NormalAtlasData; }
-	inline AuCarExpTextureAtlasData* GetAtlasDataRoughness() const { return m_RoughnessAtlasData; }
-	inline AuCarExpTextureAtlasData* GetAtlasDataMetallic() const { return m_MetallicAtlasData; }
-	inline AuCarExpTextureAtlasData* GetAtlasDataSpecular() const { return m_SpecularAtlasData; }
-	inline AuCarExpTextureAtlasData* GetAtlasDataOpacity() const { return m_OpacityAtlasData; }
-	inline AuCarExpTextureAtlasData* GetAtlasDataSecondaryTint() const { return m_SecondaryTintMaskAtlasData; }
-
-	inline AuCarExpTexture* GetMapDiffuseFinal() const { return m_DiffuseAtlasData ? m_DiffuseAtlasData->Texture : m_DiffuseTexture; }
-	inline AuCarExpTexture* GetMapNormalFinal() const { return m_NormalAtlasData ? m_NormalAtlasData->Texture : m_NormalTexture; }
-	inline AuCarExpTexture* GetMapRoughnessFinal() const { return m_RoughnessAtlasData ? m_RoughnessAtlasData->Texture : m_RoughnessTexture; }
-	inline AuCarExpTexture* GetMapMetallicFinal() const { return m_MetallicAtlasData ? m_MetallicAtlasData->Texture : m_MetallicTexture; }
-	inline AuCarExpTexture* GetMapSpecularFinal() const { return m_SpecularAtlasData ? m_SpecularAtlasData->Texture : m_SpecularTexture; }
-	inline AuCarExpTexture* GetMapOpacityFinal() const { return m_OpacityAtlasData ? m_OpacityAtlasData->Texture : m_OpacityTexture; }
-	inline AuCarExpTexture* GetMapSecondaryTintFinal() const { return m_SecondaryTintMaskAtlasData ? m_SecondaryTintMaskAtlasData->Texture : m_SecondaryTintMaskTexture; }
 
 	inline AuCarExpMaterialType GetMaterialType() const { return m_MaterialType; }
 
 	inline unsigned int GetTint() const { return m_Tint; }
 	inline unsigned int GetSecondaryTint() const { return m_SecondaryTint; }
+
 	inline bool GetAlphaBlendEnabled() const { return (m_Flags & AuCarExpMaterialFlags_AlphaBlendEnabled) != 0; }
 	inline bool GetAlphaTestEnabled() const { return (m_Flags & AuCarExpMaterialFlags_AlphaTestEnabled) != 0; }
 	inline bool IsStamped() const { return m_StampMapIndex != -1; }
+
+	//should the stamp map be used for alpha even when another alpha source is present?
+	//(for systems that don't support both)
+	inline bool StampMapHasPriority() const { return (m_Flags & AuCarExpMaterialFlags_StampMapHasPriority) != 0; }
+
 	inline bool IsPaint() const { return (m_Flags & AuCarExpMaterialFlags_IsPaint) != 0; }
 	inline bool IsMainBodyMaterial() const { return m_BodyPaintIndex != -1; }
 
 	inline float GetAlphaCutoff() const { return m_AlphaCutoff; }
-	inline float GetNormalMapStrength() const { return m_NormalStrength; }
 	inline float GetDiffuseTextureToColourLerp() const { return m_DiffuseTextureToColourLerp; }
 
 	inline int GetStampMapIndex() const { return m_StampMapIndex; }
 	inline int GetBodyPaintIndex() const { return m_BodyPaintIndex; }
 
-	inline float GetSpecularValue() const { return m_SpecularValue; }
-	inline float GetMetallicValue() const { return m_MetallicValue; }
-	inline float GetRoughnessValue() const { return m_RoughnessValue; }
-
-	inline AuCarExpPixelChannel GetSpecularMaskChannel() const { return m_SpecularMaskChannel; }
-	inline AuCarExpPixelChannel GetMetallicMaskChannel() const { return m_MetallicMaskChannel; }
-	inline AuCarExpPixelChannel GetRoughnessMaskChannel() const { return m_RoughnessMaskChannel; }
-	inline AuCarExpPixelChannel GetOpacityMaskChannel() const { return m_OpacityMaskChannel; }
-	inline AuCarExpPixelChannel GetSecondaryTintMaskChannel() const { return m_SecondaryTintMaskChannel; }
+	inline const AuCarExpTextureData& GetDiffuseMapData() const { return m_DiffuseMapData; }
+	inline const AuCarExpTextureData& GetSecondaryDiffuseMapData() const { return m_SecondaryDiffuseMapData; }
+	inline const AuCarExpTextureData& GetNormalMapData() const { return m_NormalMapData; }
+	inline const AuCarExpTextureData& GetSpecularMapData() const { return m_SpecularMapData; }
+	inline const AuCarExpTextureData& GetMetallicMapData() const { return m_MetallicMapData; }
+	inline const AuCarExpTextureData& GetRoughnessMapData() const { return m_RoughnessMapData; }
+	inline const AuCarExpTextureData& GetOpacityMapData() const { return m_OpacityMapData; }
 
 	//Paint parameters, use only if IsPaint() is true:
 	inline float GetPearlStrength() const { return m_PearlStrength; }
@@ -416,10 +407,6 @@ public:
 
 	inline AuCarExpLightType GetLightType() const { return m_LightType; }
 	inline unsigned int GetLightColour() const { return m_LightColour; }
-
-	//should the stamp map be used for alpha even when another alpha source is present?
-	//(for systems that don't support both)
-	inline bool StampMapHasPriority() const { return (m_Flags & AuCarExpMaterialFlags_StampMapHasPriority) != 0; }
 
 	inline bool IsTwoSided() const { return (m_Flags & AuCarExpMaterialFlags_TwoSided) != 0; }
 
@@ -444,35 +431,16 @@ protected:
 
 	unsigned int m_Tint = 0xFFFFFFFF;
 	unsigned int m_SecondaryTint = 0xFFFFFFFF;
-	AuCarExpPixelChannel m_SecondaryTintMaskChannel = AuCarExpPixelChannel_A;
 	float m_DiffuseTextureToColourLerp = 0.0f;
-	AuCarExpTexture* m_DiffuseTexture = nullptr;
-	AuCarExpTextureAtlasData* m_DiffuseAtlasData = nullptr;
-	AuCarExpTexture* m_SecondaryTintMaskTexture = nullptr;
-	AuCarExpTextureAtlasData* m_SecondaryTintMaskAtlasData = nullptr;
 
-	float m_NormalStrength = 1.0f;
-	AuCarExpTexture* m_NormalTexture = nullptr;
-	AuCarExpTextureAtlasData* m_NormalAtlasData = nullptr;
+	AuCarExpTextureData m_DiffuseMapData;
+	AuCarExpTextureData m_SecondaryDiffuseMapData;
 
-	float m_SpecularValue = 0.0f;
-	AuCarExpPixelChannel m_SpecularMaskChannel = AuCarExpPixelChannel_A;
-	AuCarExpTexture* m_SpecularTexture = nullptr;
-	AuCarExpTextureAtlasData* m_SpecularAtlasData = nullptr;
-
-	float m_MetallicValue = 0.0f;
-	AuCarExpPixelChannel m_MetallicMaskChannel = AuCarExpPixelChannel_A;
-	AuCarExpTexture* m_MetallicTexture = nullptr;
-	AuCarExpTextureAtlasData* m_MetallicAtlasData = nullptr;
-
-	float m_RoughnessValue = 0.0f;
-	AuCarExpPixelChannel m_RoughnessMaskChannel = AuCarExpPixelChannel_A;
-	AuCarExpTexture* m_RoughnessTexture = nullptr;
-	AuCarExpTextureAtlasData* m_RoughnessAtlasData = nullptr;
-
-	AuCarExpPixelChannel m_OpacityMaskChannel = AuCarExpPixelChannel_A;
-	AuCarExpTexture* m_OpacityTexture = nullptr;
-	AuCarExpTextureAtlasData* m_OpacityAtlasData = nullptr;
+	AuCarExpTextureData m_NormalMapData;
+	AuCarExpTextureData m_SpecularMapData;
+	AuCarExpTextureData m_MetallicMapData;
+	AuCarExpTextureData m_RoughnessMapData;
+	AuCarExpTextureData m_OpacityMapData;
 };
 
 const int MAX_INDEX_BUFFER_COUNT = 32;

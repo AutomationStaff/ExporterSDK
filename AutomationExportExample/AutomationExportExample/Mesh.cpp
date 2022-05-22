@@ -8,11 +8,12 @@
 
 void AuExpMesh::SaveMeshFile(const AuCarExpMesh* mesh, const wchar_t* filename)
 {
+
 	//save textures:
 	for (unsigned int i = 0; i < mesh->GetIndexBufferCount(); i++)
 	{
-		AuExpManager::Instance()->AddImage(mesh->GetMaterial(i)->GetMapDiffuse());
-		AuExpManager::Instance()->AddImage(mesh->GetMaterial(i)->GetMapNormal());
+		AuExpManager::Instance()->AddImage(mesh->GetMaterial(i)->GetDiffuseMapData().Texture);
+		AuExpManager::Instance()->AddImage(mesh->GetMaterial(i)->GetNormalMapData().Texture);
 	}
 
 	//save the mesh:
