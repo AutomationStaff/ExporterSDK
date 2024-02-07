@@ -84,6 +84,21 @@ AuCarExpErrorCode AuCarExportDLL::GetExporterVersion(unsigned int* VersionNumber
 	return AuCarExpErrorCode_Success;
 }
 
+AuCarExpErrorCode AuCarExportDLL::GetExportDirectory(AuCarExpArray<wchar_t>& retDir)
+{
+	AuExpManager::CreateInstance();
+
+	//tell Automation which directory the plugin will be exporting files to (so this can be displayed in a message to the user):
+	std::wstring ExportDirectory;
+	const AuCarExpErrorCode status = AuExpManager::Instance()->GetExportDirectory(ExportDirectory);
+
+	wcscpy_s(retDir.GetData(), retDir.GetCount(), ExportDirectory.c_str());
+	
+
+	return status;
+}
+
+
 //Gets the number of user-supplied strings that the plugin will be requesting
 AuCarExpErrorCode AuCarExportDLL::GetRequiredStringDataCount(unsigned int* retCount)
 {
@@ -146,7 +161,11 @@ AuCarExpErrorCode AuCarExportDLL::BeginExport(const AuCarExpCarData* carData, Au
 	AuCarExpErrorCode error = AuExpManager::Instance()->Init(carData);
 
 	//tell Automation which directory the plugin will be exporting files to (so this can be displayed in a message to the user):
-	wcscpy_s(retDir.GetData(), retDir.GetCount(), AuExpManager::Instance()->GetExportDirectory());
+	std::wstring ExportDirectory;
+	AuExpManager::Instance()->GetExportDirectory(ExportDirectory);
+
+	wcscpy_s(retDir.GetData(), retDir.GetCount(), ExportDirectory.c_str());
+	
 
 	//set the flags to none:
 	*retFlags = AuCarExpExporterFlags_None;
@@ -229,7 +248,7 @@ AuCarExpErrorCode  AuCarExportDLL::AddExhaust(const AuCarExpArray<AuCarExpMesh*>
 }
 
 //Set the driver and bonnet camera positions
-AuCarExpErrorCode  AuCarExportDLL::AddCameraPositions(const AuCarExpVector* driverCamPosition, const AuCarExpVector* bonnetCamPosition)
+AuCarExpErrorCode  AuCarExportDLL::AddCameraPositions(const AuCarExpCameraData& driverCam, const AuCarExpCameraData& bonnetCam)
 {
 	return AuCarExpErrorCode_Success;
 }
@@ -331,7 +350,19 @@ AuCarExpErrorCode AuCarExportDLL::AddLuaFiles(const AuCarExpArray<AuCarLuaDataFi
 	return AuCarExpErrorCode_Success;
 }
 
-AuCarExpErrorCode AuCarExportDLL::GetLUAFileLength(unsigned int* retLength)
+
+
+AuCarExpErrorCode AuCarExportDLL::GetLuaFileCount(unsigned int* fileCount)
+{
+	//IOHelper::WriteLog("AuCarExportDLL::GetLuaFileCount");
+	*fileCount = 1;
+
+	return AuCarExpErrorCode_Success;
+}
+
+
+
+AuCarExpErrorCode AuCarExportDLL::GetLuaFileLength(unsigned int* retLength, unsigned int FileNum)
 {
 	*retLength = 0;
 
@@ -353,7 +384,7 @@ AuCarExpErrorCode AuCarExportDLL::GetLUAFileLength(unsigned int* retLength)
 	return AuCarExpErrorCode_Success;
 }
 
-AuCarExpErrorCode AuCarExportDLL::GetLUAFile(AuCarExpArray<wchar_t>& stringBuffer)
+AuCarExpErrorCode AuCarExportDLL::GetLuaFile(AuCarExpArray<wchar_t>& stringBuffer, unsigned int FileNum)
 {
 	if (!stringBuffer.GetData())
 	{

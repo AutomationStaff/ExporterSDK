@@ -25,8 +25,9 @@ public:
 
 	void SaveMesh(const AuCarExpMesh* mesh, const wchar_t* name);
 
-	const wchar_t* GetExportDirectory() const { return m_ExportDirectory.c_str(); }
+	AuCarExpErrorCode GetExportDirectory(std::wstring& ExportDirectory) const;
 
+	std::wstring m_ExportDirectory;
 private:
 
 	AuExpManager();
@@ -35,8 +36,6 @@ private:
 	static AuExpManager* s_Instance;
 
 	std::vector<const AuCarExpTexture*> m_AllImages;
-
-	std::wstring m_ExportDirectory;
 
 	std::map<std::wstring, int> m_MeshNameCounts;
 };

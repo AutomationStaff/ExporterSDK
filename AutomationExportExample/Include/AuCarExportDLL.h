@@ -14,7 +14,7 @@
 
 //This value is incremented when data structures or interface function definitions change
 //Automation will not load export DLLs whose interface version does not match the latest version
-#define AUCAREXPORT_DLL_INTERFACE_VERSION 21
+#define AUCAREXPORT_DLL_INTERFACE_VERSION 29
 
 
 #define AUCAREXPORT_MAX_DATA_ITEM_COUNT 16
@@ -37,19 +37,24 @@ extern "C" {          // we need to export the C interface
 
 		//Defnitions to be used within Automation
 		//Exporter projects do not need to worry about these:
-
-#define AUCAREXPORTDLL_FUNCTION(Name, ...)	 typedef AuCarExpErrorCode(__cdecl *Proc ## Name)(__VA_ARGS__);\
-													 Proc ## Name GetProc ## Name(HMODULE dll) { return (Proc ## Name)GetProcAddress(dll, #Name); }
-
-		bool AuCarExpDLLInterfaceMatches(HMODULE dll) { FARPROC proc = GetProcAddress(dll, "AuCarExpDLLInterface"); return proc ? proc() == AUCAREXPORT_DLL_INTERFACE_VERSION : false; }
-
+        
+	#if PLATFORM_WINDOWS
+		#define AUCAREXPORTDLL_FUNCTION(Name, ...)	 typedef AuCarExpErrorCode(__cdecl *Proc ## Name)(__VA_ARGS__);\
+															Proc ## Name GetProc ## Name(HMODULE dll) { return (Proc ## Name)GetProcAddress(dll, #Name); }
+				bool AuCarExpDLLInterfaceMatches(HMODULE dll) { FARPROC proc = GetProcAddress(dll, "AuCarExpDLLInterface"); return proc ? proc() == AUCAREXPORT_DLL_INTERFACE_VERSION : false;}
+	#else
+		
+	#define AUCAREXPORTDLL_FUNCTION(Name, ...)     typedef AuCarExpErrorCode(__cdecl *Proc ## Name)(__VA_ARGS__);\
+						Proc ## Name GetProc ## Name(HMODULE dll) { return nullptr; }
+		
+		
+		bool AuCarExpDLLInterfaceMatches(HMODULE dll) {return false; }
+		#endif
 #else
 
-		//Definitions to be used by exporter dll projects:
-
-#define AUCAREXPORTDLL_FUNCTION(Name, ...) __declspec(dllexport) AuCarExpErrorCode __cdecl Name(__VA_ARGS__);
-
-		__declspec(dllexport) long long __cdecl AuCarExpDLLInterface() { return AUCAREXPORT_DLL_INTERFACE_VERSION; }
+        //Definitions to be used by exporter dll projects:
+	#define AUCAREXPORTDLL_FUNCTION(Name, ...) __declspec(dllexport) AuCarExpErrorCode __cdecl Name(__VA_ARGS__);
+        __declspec(dllexport) long long __cdecl AuCarExpDLLInterface() { return AUCAREXPORT_DLL_INTERFACE_VERSION; }
 
 #endif
 
@@ -115,7 +120,7 @@ extern "C" {          // we need to export the C interface
 		AUCAREXPORTDLL_FUNCTION(AddExhaust, const AuCarExpArray<AuCarExpMesh*>& meshes, const AuCarExpArray<AuCarExpVector>& points);
 
 		//Set the driver and bonnet camera positions
-		AUCAREXPORTDLL_FUNCTION(AddCameraPositions, const AuCarExpVector* driverCamPosition, const AuCarExpVector* bonnetCamPosition);
+		AUCAREXPORTDLL_FUNCTION(AddCameraPositions, const AuCarExpCameraData& driverCam, const AuCarExpCameraData& bonnetCam);
 
 		//Export a pair of wheels (either front or back), including the suspension meshes
 		AUCAREXPORTDLL_FUNCTION(AddWheelPair, const AuCarExpWheelData& wheelData, const bool isFront);
@@ -149,8 +154,10 @@ extern "C" {          // we need to export the C interface
 		AUCAREXPORTDLL_FUNCTION(AddLuaFiles, const AuCarExpArray<AuCarLuaDataFile>& Data);
 
 		//
-		AUCAREXPORTDLL_FUNCTION(GetLUAFileLength, unsigned int* retLength);
-		AUCAREXPORTDLL_FUNCTION(GetLUAFile, AuCarExpArray<wchar_t>& stringBuffer);
+		AUCAREXPORTDLL_FUNCTION(GetLuaFileCount, unsigned int* fileCount);
+
+		AUCAREXPORTDLL_FUNCTION(GetLuaFileLength, unsigned int* retLength, unsigned int FileNum);
+		AUCAREXPORTDLL_FUNCTION(GetLuaFile, AuCarExpArray<wchar_t>& stringBuffer, unsigned int FileNum);
 	}
 
 

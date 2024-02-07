@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <functional>
+
 
 #define AuCarExpErrorCode_FatalBit (0x1 << 31)
 
@@ -69,10 +71,7 @@ enum AuCarExpPixelChannel
 
 enum AuCarExpMaterialType
 {
-	AuCarExpMaterialType_Grille,
 	AuCarExpMaterialType_ClearGlass,
-	AuCarExpMaterialType_NumberPlate,
-
 	AuCarExpMaterialType_Other
 };
 
@@ -80,6 +79,7 @@ enum AuCarExpLightType
 {
 	AuCarExpLightType_HeadLight,
 	AuCarExpLightType_TailLight,
+	AuCarExpLightType_BrakeLight,
 	AuCarExpLightType_IndicatorLeft,
 	AuCarExpLightType_IndicatorRight,
 	AuCarExpLightType_Reverse,
@@ -191,6 +191,11 @@ public:
 	inline const float & operator[](int index) const { return value[index]; }
 	inline float & operator[](int index) { return value[index]; }
 
+	bool operator==(const AuCarExpVector& other) const
+	{
+		return x == other.x && y == other.y && z == other.z;
+	}
+
 #define AUCAREXPVECTOR_OPERATOR_SIMP(OP) inline AuCarExpVector operator OP (const AuCarExpVector& other) const { return AuCarExpVector(this->x OP other.x, this->y OP other.y, this->z OP other.z); }
 #define AUCAREXPVECTOR_OPERATOR_COMPOUND(OP) inline AuCarExpVector& operator OP (const AuCarExpVector& other) { this->x OP other.x; this->y OP other.y; this->z OP other.z; return *this; }
 
@@ -225,6 +230,13 @@ public:
 		float _y = this->z * other.x - other.z * this->x;
 		float _z = this->x * other.y - other.x * this->y;
 		return AuCarExpVector(_x, _y, _z);
+	}
+
+	inline float NodeToVertexDistance(const AuCarExpVector& vertex, float zOffset) const
+	{
+		return sqrtf((vertex.x * 0.01f + zOffset - this->x) * (vertex.x * 0.01f + zOffset - this->x) +
+						(vertex.y * 0.01f + zOffset - this->y) * (vertex.y * 0.01f + zOffset - this->y) +
+							(vertex.z * 0.01f + zOffset - this->z) * (vertex.z * 0.01f + zOffset - this->z));
 	}
 
 	inline AuCarExpVector operator^(const AuCarExpVector& other) const { return this->CrossProduct(other); }
@@ -273,6 +285,11 @@ public:
 	const float & operator[](int index) const { return value[index]; }
 	float & operator[](int index) { return value[index]; }
 
+	bool operator==(const AuCarExpVector2& other) const
+	{
+		return x == other.x && y == other.y;
+	}
+
 	AuCarExpVector2() : x(0.0f), y(0.0f) {}
 	AuCarExpVector2(float xVal, float yVal) : x(xVal), y(yVal) {}
 };
@@ -288,6 +305,13 @@ public:
 	AuCarExpVector Binormal;
 	AuCarExpVector Tangent;
 	unsigned int Colour = 0xFFFFFFFF;
+
+	bool operator==(const AuCarExpVertex& other) const
+	{
+		return Position == other.Position && UVcoords0 == other.UVcoords0 && UVcoords1 == other.UVcoords1
+											&& Normal == other.Normal && Binormal == other.Binormal && Tangent == other.Tangent
+											&& Colour == other.Colour;
+	}
 };
 
 const unsigned int AuCarExpMaxAdditionalMipCount = 16;
@@ -296,7 +320,7 @@ class AuCarExpTexture
 {
 public:
 	inline AuCarExpPixelFormat GetFormat() const { return m_PixelFormat; }
-	inline const wchar_t* GetName() const { return m_Name; }
+	inline const TCHAR* GetName() const { return m_Name; }
 
 	//Width and height in pixels:
 	inline unsigned int GetWidth() const { return m_Width; }
@@ -311,6 +335,7 @@ public:
 
 	inline bool GetDoNotUseBlockCompression() const { return m_DoNotUseBlockCompression; }
 	inline bool IsUniqueTexture() const { return m_IsUniqueTexture; }
+	inline bool IsSRGB() const { return m_IsSRGB; }
 
 	inline unsigned int GetAdditionalMipCount() const { return m_AdditionalMipCount; }
 	const AuCarExpTexture* GetAdditionalMipMap(unsigned int index) const { return m_AdditionalMips[index]; }
@@ -327,10 +352,11 @@ protected:
 	AuCarExpPixelFormat m_PixelFormat = AuCarExpPixelFormat_Unknown;
 	int m_Pitch = 0;
 
-	wchar_t m_Name[64] = L"";
+    TCHAR m_Name[64] = TEXT("");
 
 	bool m_DoNotUseBlockCompression = false;
 	bool m_IsUniqueTexture = false;
+	bool m_IsSRGB = false;
 
 	unsigned int m_AdditionalMipCount = 0;
 	AuCarExpTexture* m_AdditionalMips[AuCarExpMaxAdditionalMipCount];
@@ -370,10 +396,13 @@ class AuCarExpMaterial
 {
 public:
 
+	inline const TCHAR* GetName() const { return m_Name; }
+
 	inline AuCarExpMaterialType GetMaterialType() const { return m_MaterialType; }
 
 	inline unsigned int GetTint() const { return m_Tint; }
 	inline unsigned int GetSecondaryTint() const { return m_SecondaryTint; }
+	inline unsigned int GetEmmissiveTint() const { return m_EmmissiveTint; }
 
 	inline bool GetAlphaBlendEnabled() const { return (m_Flags & AuCarExpMaterialFlags_AlphaBlendEnabled) != 0; }
 	inline bool GetAlphaTestEnabled() const { return (m_Flags & AuCarExpMaterialFlags_AlphaTestEnabled) != 0; }
@@ -399,10 +428,16 @@ public:
 	inline const AuCarExpTextureData& GetMetallicMapData() const { return m_MetallicMapData; }
 	inline const AuCarExpTextureData& GetRoughnessMapData() const { return m_RoughnessMapData; }
 	inline const AuCarExpTextureData& GetOpacityMapData() const { return m_OpacityMapData; }
+	inline const AuCarExpTextureData& GetEmmissiveMapData() const { return m_EmmissiveMapData; }
+	inline const AuCarExpTextureData& GetClearCoatMapData() const { return m_ClearCoatMapData; }
+	inline const AuCarExpTextureData& GetClearCoatBottomNormalMapData() const { return m_ClearCoatBottomNormalMapData; }
+	inline const AuCarExpTextureData& GetAmbientOcclusionMapData() const { return m_AmbientOcclusionMapData; }
+	inline const AuCarExpTextureData& GetDetailMapData() const { return m_DetailMapData; }
+	inline const AuCarExpTextureData& GetDetailNormalMapData() const { return m_DetailNormalMapData; }
 
-	//Paint parameters, use only if IsPaint() is true:
-	inline float GetPearlStrength() const { return m_PearlStrength; }
-	inline float GetFlakeStrength() const { return m_FlakeStrength; }
+	inline float GetClearCoatRoughness() const { return m_ClearCoatRoughness; }
+
+	inline AuCarExpVector2 GetDetailMapUVScale() const { return m_DetailMapUVScale; }
 
 
 	inline AuCarExpLightType GetLightType() const { return m_LightType; }
@@ -411,6 +446,8 @@ public:
 	inline bool IsTwoSided() const { return (m_Flags & AuCarExpMaterialFlags_TwoSided) != 0; }
 
 protected:
+
+	TCHAR m_Name[256] = TEXT("");
 
 	AuCarExpMaterialType m_MaterialType = AuCarExpMaterialType_Other;
 
@@ -422,16 +459,14 @@ protected:
 	int m_StampMapIndex = -1;
 	int m_BodyPaintIndex = -1;
 
-	//Paint parameters, use only if m_Flags contains AuCarExpMaterialFlags_IsPaint:
-	float m_PearlStrength = 0.0f;
-	float m_FlakeStrength = 0.0f;
-
 	AuCarExpLightType m_LightType = AuCarExpLightType_None;
 	unsigned int m_LightColour = 0xFFFFFFFF;
 
 	unsigned int m_Tint = 0xFFFFFFFF;
 	unsigned int m_SecondaryTint = 0xFFFFFFFF;
 	float m_DiffuseTextureToColourLerp = 0.0f;
+
+	unsigned int m_EmmissiveTint = 0x00000000;
 
 	AuCarExpTextureData m_DiffuseMapData;
 	AuCarExpTextureData m_SecondaryDiffuseMapData;
@@ -441,6 +476,18 @@ protected:
 	AuCarExpTextureData m_MetallicMapData;
 	AuCarExpTextureData m_RoughnessMapData;
 	AuCarExpTextureData m_OpacityMapData;
+	AuCarExpTextureData m_EmmissiveMapData;
+	AuCarExpTextureData m_AmbientOcclusionMapData;
+
+	//clear coat
+	float m_ClearCoatRoughness = 0.0f;
+	AuCarExpTextureData m_ClearCoatMapData;
+	AuCarExpTextureData m_ClearCoatBottomNormalMapData;
+
+	//detail maps:
+	AuCarExpTextureData m_DetailMapData;
+	AuCarExpTextureData m_DetailNormalMapData;
+	AuCarExpVector2 m_DetailMapUVScale;
 };
 
 const int MAX_INDEX_BUFFER_COUNT = 32;
@@ -513,15 +560,71 @@ public:
 	AuCarExpVector Scale = AuCarExpVector(1.0f, 1.0f, 1.0f);
 };
 
+
+template<>
+struct std::hash<AuCarExpVector>
+{
+	std::size_t operator()(const AuCarExpVector& vector) const
+	{
+		size_t outHash = 0;
+//#if PLATFORM_WINDOWS || defined(_WINDOWS)
+		outHash = std::hash<float>()(vector.x);
+		outHash ^= std::hash<float>()(vector.y) << 1;
+		outHash >>= 1;
+		outHash ^= std::hash<float>()(vector.z) << 1;
+//#endif
+		return outHash;
+	}
+};
+
+template<>
+struct std::hash<AuCarExpVector2>
+{
+	std::size_t operator()(const AuCarExpVector2& vector) const
+	{
+		size_t outHash = 0;
+//#if PLATFORM_WINDOWS	 || defined(_WINDOWS)	
+		outHash = std::hash<float>()(vector.x);
+		outHash ^= std::hash<float>()(vector.y) << 1;
+//#endif
+		return outHash;
+	}
+};
+
+template<>
+struct std::hash<AuCarExpVertex>
+{
+	std::size_t operator()(const AuCarExpVertex& vertex) const
+	{
+		size_t outHash;
+		outHash = std::hash<AuCarExpVector>()(vertex.Position);
+		outHash ^= std::hash<AuCarExpVector2>()(vertex.UVcoords0) << 1;
+		outHash >>= 1;
+		outHash ^= std::hash<AuCarExpVector2>()(vertex.UVcoords1) << 1;
+		outHash >>= 1;
+		outHash ^= std::hash<AuCarExpVector>()(vertex.Normal) << 1;
+		outHash >>= 1;
+		outHash ^= std::hash<AuCarExpVector>()(vertex.Binormal) << 1;
+		outHash >>= 1;
+		outHash ^= std::hash<AuCarExpVector>()(vertex.Tangent) << 1;
+		outHash >>= 1;
+		outHash ^= std::hash<unsigned int>()(vertex.Colour) << 1;
+
+		return outHash;
+	}
+};
+
 struct AuCarExpUIStringData
 {
 public:
 
 	static const unsigned int LABEL_STRING_LENGTH = 63;
+	static const unsigned int TOOLTIP_STRING_LENGTH = 511;
 	static const unsigned int VALUE_STRING_LENGTH = 511;
 
-	wchar_t Label[LABEL_STRING_LENGTH + 1] = L"";
-	wchar_t Value[VALUE_STRING_LENGTH + 1] = L"";
+	TCHAR Label[LABEL_STRING_LENGTH + 1] = TEXT("");
+	TCHAR ToolTip[TOOLTIP_STRING_LENGTH + 1] = TEXT("");
+	TCHAR Value[VALUE_STRING_LENGTH + 1] = TEXT("");
 };
 
 struct AuCarExpUIBoolData
@@ -529,8 +632,10 @@ struct AuCarExpUIBoolData
 public:
 
 	static const unsigned int LABEL_STRING_LENGTH = 63;
+	static const unsigned int TOOLTIP_STRING_LENGTH = 511;
 
-	wchar_t Label[LABEL_STRING_LENGTH + 1] = L"";
+	TCHAR Label[LABEL_STRING_LENGTH + 1] = TEXT("");
+	TCHAR ToolTip[TOOLTIP_STRING_LENGTH + 1] = TEXT("");
 	bool Value = false;
 };
 
@@ -538,7 +643,7 @@ class AuCarExpCarData
 {
 public:
 
-	inline const wchar_t* GetCarName() const { return m_CarName; }
+	inline const TCHAR* GetCarName() const { return m_CarName; }
 
 	inline float GetHeightOffset() const { return m_HeightOffset; }
 
@@ -552,7 +657,7 @@ public:
 
 protected:
 
-	wchar_t m_CarName[512] = L"";
+	TCHAR m_CarName[512] = TEXT("");
 
 	float m_HeightOffset = 0.0f;
 
@@ -569,14 +674,16 @@ protected:
 class AuCarExpSoundSample
 {
 public:
-	AuCarExpSoundSample(const wchar_t* Name, float* Samples, int SampleCount) :
+	AuCarExpSoundSample(const TCHAR* Name, float* Samples, int SampleCount) :
 		m_SamplesBuffer(Samples),
 		m_SampleCount(SampleCount)
 	{
+#if PLATFORM_WINDOWS || defined(_WINDOWS)
 		wcscpy_s(m_Name, Name);
+	#endif
 	}
 
-	inline const wchar_t* GetName() const { return m_Name; }
+	inline const TCHAR* GetName() const { return m_Name; }
 	inline float* GetSamples() const { return m_SamplesBuffer; }
 	inline unsigned int GetSampleCount() const { return m_SampleCount; }
 
@@ -588,25 +695,28 @@ public:
 	unsigned int  m_SampleCount = 0;
 	unsigned int  m_SampleRate = 44100;
 
-	wchar_t m_Name[64] = L"";
+    TCHAR m_Name[64] = TEXT("");
 };
 
 struct AuCarExpWheelData
 {
 public:
-	float TyreDiameter;
-	float TyreWidth;
-	float RimDiameter;
-	AuCarExpMesh* TyreMesh;
-	AuCarExpMesh* RimMesh;
+	float TyreDiameter = 0.0f;
+	float TyreWidth = 0.0f;
+	float RimDiameter = 0.0f;
+	AuCarExpMesh* TyreMesh = nullptr;
+	AuCarExpMesh* RimMesh = nullptr;
 	AuCarExpMesh* BrakeMeshes[AuCarExpBrakeMeshType_Count];
 
 	AuCarExpMesh* SuspensionMesh = nullptr;
 	bool MirrorSuspensionMesh = false;
 	AuCarExpSuspensionType SuspensionType = AuCarExpSuspensionType_Count;
 
+	bool LeftRimIsMirrored = false;
+	bool RightRimIsMirrored = false;
+
 	AuCarExpWheelData(float tyreDiameter, float tyreWidth, float rimDiameter, AuCarExpMesh* tyreMesh, AuCarExpMesh* rimMesh) :
-		TyreDiameter(tyreDiameter),
+    TyreDiameter(tyreDiameter),
 		TyreWidth(tyreWidth),
 		RimDiameter(rimDiameter),
 		TyreMesh(tyreMesh),
@@ -619,18 +729,25 @@ public:
 	}
 };
 
+struct AuCarExpCameraData
+{
+public:
+	AuCarExpVector Position;
+	float FoV = 60.0f;
+};
+
 struct AuCarExpLuaFloatData
 {
 public:
-	wchar_t ValueName[64] = L"";
+	TCHAR ValueName[64] = TEXT("");
 	float Value = 0.0f;
 };
 
 struct AuCarExpLuaStringData
 {
 public:
-	wchar_t ValueName[64] = L"";
-	wchar_t* Buffer = nullptr;
+    TCHAR ValueName[64] = TEXT("");
+    TCHAR* Buffer = nullptr;
 	int BufferSize = 0;
 };
 
@@ -638,7 +755,7 @@ public:
 struct AuCarLuaDataFile
 {
 public:
-	wchar_t FileName[64] = L"";
+    TCHAR FileName[64] = TEXT("");
 	char* Buffer = nullptr;
 	int BufferSize = 0;
 };

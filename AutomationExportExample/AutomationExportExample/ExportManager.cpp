@@ -24,26 +24,14 @@ size_t FindDirDelimiter(std::wstring dir, size_t start)
 
 AuExpManager* AuExpManager::s_Instance = nullptr;
 
-AuExpManager::AuExpManager() :
-	m_ExportDirectory(L"")
+AuExpManager::AuExpManager()
 {
 }
 
 AuCarExpErrorCode AuExpManager::Init(const AuCarExpCarData* carData)
 {
-	TCHAR path[MAX_PATH];
-
-	//get the user's documents directory:
-	if (SHGetFolderPathW(0, CSIDL_MYDOCUMENTS, 0, SHGFP_TYPE_CURRENT, path) == S_OK)
-	{
-		m_ExportDirectory = path;
-		m_ExportDirectory += L"\\Automation Export Example";
-	}
-	else
-	{
-		return AuCarExpErrorCode_CouldNotObtainOutputPathFatal;
-	}
-
+	
+	GetExportDirectory(m_ExportDirectory);
 
 	m_ExportDirectory += L"\\";
 	m_ExportDirectory += carData->GetCarName();//TODO: sanitise filename
@@ -141,4 +129,23 @@ void AuExpManager::SaveMesh(const AuCarExpMesh* mesh, const wchar_t* name)
 	filename += L".obj";
 
 	AuExpMesh::SaveMeshFile(mesh, filename.c_str());
+}
+
+AuCarExpErrorCode AuExpManager::GetExportDirectory(std::wstring& ExportDirectory) const
+{
+	TCHAR path[MAX_PATH];
+
+	//get the user's documents directory:
+	if (SHGetFolderPathW(0, CSIDL_MYDOCUMENTS, 0, SHGFP_TYPE_CURRENT, path) == S_OK)
+	{
+		ExportDirectory = path;
+		ExportDirectory += L"\\Automation Export Example";
+	}
+
+	else
+	{
+		return AuCarExpErrorCode_CouldNotObtainOutputPathFatal;
+	}
+	
+	return AuCarExpErrorCode_Success;
 }

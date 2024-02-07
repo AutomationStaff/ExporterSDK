@@ -143,6 +143,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Include\AuCarExport.h" />
+    <ClInclude Include="..\Include\AuCarExportDLL.h" />
     <ClInclude Include="AutomationExportExample.h" />
     <ClInclude Include="DDSHeader.h" />
     <ClInclude Include="ExportManager.h" />
